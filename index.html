@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Interés Compuesto en Pesos y Dólares | Libertad Financiera</title>
+    <meta name="description" content="Calculá gratis cuánto crecen tus ahorros con interés compuesto en pesos o dólares. Sumá aportes mensuales, ajustá por inflación y mirá la evolución año a año.">
+
+    <!-- PASO OBLIGATORIO: pegá acá tu metaetiqueta de Google Search Console -->
+    <!-- <meta name="google-site-verification" content="TU_CODIGO_DE_GOOGLE_AQUI" /> -->
+
+    <!-- Reemplazá por la URL real de tu sitio -->
+    <!-- <link rel="canonical" href="https://tusitio.com/simulador-interes-compuesto" /> -->
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Simulador de Interés Compuesto en Pesos y Dólares">
+    <meta property="og:description" content="Calculá cuánto crecen tus ahorros con interés compuesto, aportes mensuales e inflación.">
+    <meta name="theme-color" content="#08090c">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Simulador de Interés Compuesto",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Any",
+      "inLanguage": "es-AR",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "ARS" }
+    }
+    </script>
+
+    <!-- Chart.js (la URL original "https://jsdelivr.net" no cargaba nada) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+
+    <style>
+        :root {
+            --bg-main: #08090c;
+            --bg-card: #11131c;
+            --bg-input: #171926;
+            --accent: #00f2fe;
+            --accent-2: #4facfe;
+            --accent-gradient: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            --text-title: #ffffff;
+            --text-body: #94a3b8;
+            --text-light: #f8fafc;
+            --positive: #34d399;
+            --warning: #fbbf24;
+            --border-color: rgba(255, 255, 255, 0.06);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-body);
+            margin: 0;
+            padding: 16px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 24px 0;
+        }
+
+        /* Encabezado */
+        header { text-align: center; margin-bottom: 36px; }
+
+        header h1 {
+            color: var(--text-title);
+            font-size: clamp(28px, 5vw, 40px);
+            font-weight: 800;
+            margin: 0 0 10px;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+
+        @supports (-webkit-background-clip: text) {
+            header h1 {
+                background: linear-gradient(to right, #ffffff, #94a3b8);
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+        }
+
+        header p { font-size: 16px; margin: 0; }
+
+        /* Selector de moneda */
+        .currency-selector {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .currency-btn {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-body);
+            padding: 12px 26px;
+            border-radius: 30px;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .currency-btn:hover { color: var(--text-light); }
+
+        .currency-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        .currency-btn[aria-pressed="true"] {
+            background: var(--accent-gradient);
+            color: #050508;
+            border-color: transparent;
+            box-shadow: 0 4px 25px rgba(0, 242, 254, 0.25);
+        }
+
+        /* Grid */
+        .app-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+
+        @media (min-width: 880px) {
+            .app-grid { grid-template-columns: 400px 1fr; }
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+            transition: border-color 0.3s ease;
+            min-width: 0;
+        }
+
+        .card:hover { border-color: rgba(0, 242, 254, 0.18); }
+
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .card { padding: 20px; border-radius: 18px; }
+        }
+
+        /* Inputs */
+        .input-group { margin-bottom: 20px; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-light);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .hint {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--text-body);
+        }
+
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            font-weight: 600;
+            font-size: 15px;
+            pointer-events: none;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px 14px 44px;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-input);
+            color: #fff;
+            font: inherit;
+            font-size: 16px; /* 16px evita el zoom automático en iOS */
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            background-color: #1a1e33;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(0, 242, 254, 0.08);
+        }
+
+        input[aria-invalid="true"] { border-color: #f87171; }
+
+        /* Quita las flechitas de los number inputs */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* Resultados */
+        .result-box {
+            background: linear-gradient(135deg, rgba(23, 25, 38, 0.5) 0%, rgba(8, 9, 12, 0.8) 100%);
+            padding: 22px 22px 22px 26px;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+            margin-top: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--accent-gradient);
+        }
+
+        .result-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-val {
+            font-size: clamp(28px, 6vw, 36px);
+            font-weight: 800;
+            color: #fff;
+            margin-top: 8px;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 25px rgba(0, 242, 254, 0.25);
+            word-break: break-word;
+        }
+
+        .breakdown {
+            display: grid;
+            gap: 10px;
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        .breakdown-row { display: flex; justify-content: space-between; gap: 12px; }
+        .breakdown-row strong { color: var(--text-light); font-weight: 600; text-align: right; }
+        .breakdown-row .pos { color: var(--positive); }
+        .breakdown-row .warn { color: var(--warning); }
+
+        /* Gráfico */
+        .chart-card { display: flex; flex-direction: column; }
+
+        .chart-card h2 {
+            margin: 0 0 16px;
+            font-size: 16px;
+            color: var(--text-light);
+            font-weight: 700;
+        }
+
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 360px;
+        }
+
+        .chart-fallback {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* Contenido SEO */
+        .seo-section {
+            border-top: 1px solid var(--border-color);
+            padding-top: 40px;
+            max-width: 780px;
+            margin: 0 auto;
+        }
+
+        .seo-section h2 {
+            color: var(--text-light);
+            font-size: 26px;
+            font-weight: 700;
+            margin: 40px 0 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .seo-section h2:first-child { margin-top: 0; }
+
+        .seo-section p {
+            line-height: 1.75;
+            font-size: 15px;
+            margin: 0 0 20px;
+        }
+
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: var(--text-light);
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 22px;
+            border-radius: 18px;
+            margin-bottom: 18px;
+        }
+
+        .info-card-title {
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .info-card p { margin: 0; }
+
+        footer {
+            text-align: center;
+            font-size: 12px;
+            margin-top: 50px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>Simulador de Libertad Financiera</h1>
+            <p>Calculá el impacto exponencial del interés compuesto en tus finanzas.</p>
+        </header>
+
+        <div class="currency-selector" role="group" aria-label="Moneda">
+            <button type="button" class="currency-btn" data-currency="ARS" data-rate="40" aria-pressed="true">Pesos (ARS)</button>
+            <button type="button" class="currency-btn" data-currency="USD" data-rate="9" aria-pressed="false">Dólares (USD)</button>
+        </div>
+
+        <div class="app-grid">
+            <!-- Entradas -->
+            <form class="card" id="form-simulador" onsubmit="return false" novalidate>
+                <div class="input-group">
+                    <label for="principal">Capital inicial</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon js-symbol">$</span>
+                        <input type="number" id="principal" value="100000" min="0" step="any" inputmode="decimal">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="monthly">Aporte mensual</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon js-symbol">$</span>
+                        <input type="number" id="monthly" value="20000" min="0" step="any" inputmode="decimal">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="rate">Tasa de interés anual (TNA %)</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">%</span>
+                        <input type="number" id="rate" value="40" min="0" max="1000" step="any" inputmode="decimal">
+                    </div>
+                    <span class="hint">Se capitaliza mensualmente.</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="years">Plazo (años)</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">⏱</span>
+                        <input type="number" id="years" value="5" min="1" max="60" step="1" inputmode="numeric">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="inflation">Inflación anual estimada (%)</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">%</span>
+                        <input type="number" id="inflation" value="30" min="0" max="1000" step="any" inputmode="decimal">
+                    </div>
+                    <span class="hint">Poné 0 si no querés ajustar por inflación.</span>
+                </div>
+
+                <div class="result-box" aria-live="polite">
+                    <div class="result-label">Monto estimado al final</div>
+                    <div class="result-val" id="total-result">$ 0</div>
+
+                    <div class="breakdown">
+                        <div class="breakdown-row">
+                            <span>Total aportado</span>
+                            <strong id="total-aportado">–</strong>
+                        </div>
+                        <div class="breakdown-row">
+                            <span>Intereses ganados</span>
+                            <strong id="total-intereses" class="pos">–</strong>
+                        </div>
+                        <div class="breakdown-row" id="row-real">
+                            <span>Poder de compra real (hoy)</span>
+                            <strong id="total-real" class="warn">–</strong>
+                        </div>
+                        <div class="breakdown-row">
+                            <span>Rendimiento real anual</span>
+                            <strong id="tasa-real">–</strong>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Gráfico -->
+            <section class="card chart-card" aria-label="Gráfico de crecimiento">
+                <h2>Evolución año a año</h2>
+                <div class="chart-container">
+                    <canvas id="graficoCrecimiento" role="img" aria-label="Gráfico de barras con el capital aportado y los intereses acumulados por año"></canvas>
+                    <div class="chart-fallback" id="chart-fallback">No se pudo cargar el gráfico. Revisá tu conexión.</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Contenido SEO -->
+        <article class="seo-section">
+            <h2>¿Cómo funciona el interés compuesto en Argentina?</h2>
+            <p>El interés compuesto es el interés que se calcula no solo sobre el capital que depositaste, sino también sobre los intereses que ya ganaste. Cada mes, lo ganado se suma al capital y empieza a generar rendimiento propio. Con el tiempo, ese efecto "bola de nieve" hace que la curva de crecimiento deje de ser una línea recta y se vuelva exponencial.</p>
+
+            <p>Este simulador capitaliza mensualmente: toma la tasa nominal anual (TNA), la divide por 12 y la aplica mes a mes sobre el saldo acumulado más tus aportes.</p>
+
+            <div class="formula">VF = C × (1 + i)ⁿ + A × [((1 + i)ⁿ − 1) / i]</div>
+
+            <p>Donde <strong>C</strong> es el capital inicial, <strong>A</strong> el aporte mensual, <strong>i</strong> la tasa mensual (TNA / 12) y <strong>n</strong> la cantidad de meses.</p>
+
+            <h2>¿Por qué importa ajustar por inflación?</h2>
+            <p>Un número grande en pesos no siempre significa que ganaste. Si la inflación supera a la tasa que cobrás, tu dinero crece en cantidad pero pierde poder de compra. Por eso el simulador muestra el <strong>valor real</strong>: cuánto valdría el monto final en pesos de hoy, y el <strong>rendimiento real anual</strong>, que puede ser negativo.</p>
+
+            <h2>Claves para aprovechar el interés compuesto</h2>
+
+            <div class="info-card">
+                <div class="info-card-title">⏳ Empezá cuanto antes</div>
+                <p>El tiempo es la variable más poderosa de la fórmula. Unos años extra pueden pesar más que duplicar el aporte mensual.</p>
+            </div>
+
+            <div class="info-card">
+                <div class="info-card-title">🔁 Sé constante con los aportes</div>
+                <p>Aportar todos los meses, aunque sea poco, alimenta la base sobre la que se calculan los intereses futuros.</p>
+            </div>
+
+            <div class="info-card">
+                <div class="info-card-title">📊 Compará TNA contra inflación</div>
+                <p>Lo que importa es la tasa real. Una TNA alta en pesos puede rendir menos que una tasa baja en dólares si la inflación es elevada.</p>
+            </div>
+        </article>
+
+        <footer>
+            Simulación con fines educativos. Los resultados son estimaciones y no constituyen asesoramiento financiero.
+            Las tasas e inflación reales pueden variar.
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+
+        const $ = (id) => document.getElementById(id);
+
+        const inputs = {
+            principal: $('principal'),
+            monthly:   $('monthly'),
+            rate:      $('rate'),
+            years:     $('years'),
+            inflation: $('inflation'),
+        };
+
+        let moneda = 'ARS';
+        let grafico = null;
+
+        // ---------- Formato de números ----------
+        const formatoMoneda = () => new Intl.NumberFormat('es-AR', {
+            style: 'currency', currency: moneda, maximumFractionDigits: 0,
+        });
+        const formatoCompacto = () => new Intl.NumberFormat('es-AR', {
+            notation: 'compact', maximumFractionDigits: 1,
+        });
+        const formatoPct = new Intl.NumberFormat('es-AR', {
+            style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1,
+        });
+
+        // ---------- Lectura y validación ----------
+        function leer(input, { min = 0, max = Infinity, entero = false } = {}) {
+            let v = parseFloat(input.value);
+            const valido = Number.isFinite(v) && v >= min && v <= max;
+            input.setAttribute('aria-invalid', String(!valido && input.value !== ''));
+            if (!Number.isFinite(v)) v = 0;
+            v = Math.min(Math.max(v, min), max);
+            return entero ? Math.round(v) : v;
+        }
+
+        // ---------- Cálculo ----------
+        function simular({ principal, monthly, rate, years, inflation }) {
+            const tasaMensual = rate / 100 / 12;
+            const meses = years * 12;
+            let saldo = principal;
+            let aportado = principal;
+
+            const anual = [{ anio: 0, saldo, aportado }];
+
+            for (let m = 1; m <= meses; m++) {
+                saldo = saldo * (1 + tasaMensual) + monthly;
+                aportado += monthly;
+                if (m % 12 === 0) anual.push({ anio: m / 12, saldo, aportado });
+            }
+
+            const inf = inflation / 100;
+            anual.forEach(p => { p.real = p.saldo / Math.pow(1 + inf, p.anio); });
+
+            // Tasa efectiva anual y tasa real (ecuación de Fisher)
+            const tea = Math.pow(1 + tasaMensual, 12) - 1;
+            const tasaReal = (1 + tea) / (1 + inf) - 1;
+
+            return { anual, saldo, aportado, intereses: saldo - aportado, real: anual.at(-1).real, tasaReal, inf };
+        }
+
+        // ---------- Render ----------
+        function calcular() {
+            const datos = {
+                principal: leer(inputs.principal),
+                monthly:   leer(inputs.monthly),
+                rate:      leer(inputs.rate, { max: 1000 }),
+                years:     leer(inputs.years, { min: 1, max: 60, entero: true }),
+                inflation: leer(inputs.inflation, { max: 1000 }),
+            };
+
+            const r = simular(datos);
+            const fmt = formatoMoneda();
+
+            $('total-result').textContent    = fmt.format(r.saldo);
+            $('total-aportado').textContent  = fmt.format(r.aportado);
+            $('total-intereses').textContent = fmt.format(r.intereses);
+            $('total-real').textContent      = fmt.format(r.real);
+            $('row-real').style.display      = r.inf > 0 ? '' : 'none';
+
+            const tasaRealEl = $('tasa-real');
+            tasaRealEl.textContent = formatoPct.format(r.tasaReal);
+            tasaRealEl.className = r.tasaReal >= 0 ? 'pos' : 'warn';
+
+            dibujarGrafico(r);
+        }
+
+        function dibujarGrafico(r) {
+            if (typeof Chart === 'undefined') return;
+
+            const labels    = r.anual.map(p => p.anio === 0 ? 'Hoy' : `Año ${p.anio}`);
+            const aportes   = r.anual.map(p => Math.round(p.aportado));
+            const intereses = r.anual.map(p => Math.max(0, Math.round(p.saldo - p.aportado)));
+            const reales    = r.anual.map(p => Math.round(p.real));
+
+            const datasets = [
+                {
+                    type: 'bar', label: 'Capital aportado', data: aportes,
+                    backgroundColor: 'rgba(79, 172, 254, 0.55)', borderRadius: 6, stack: 'total', order: 2,
+                },
+                {
+                    type: 'bar', label: 'Intereses', data: intereses,
+                    backgroundColor: 'rgba(0, 242, 254, 0.9)', borderRadius: 6, stack: 'total', order: 2,
+                },
+            ];
+
+            if (r.inf > 0) {
+                datasets.push({
+                    type: 'line', label: 'Valor real (ajustado por inflación)', data: reales,
+                    borderColor: '#fbbf24', backgroundColor: '#fbbf24',
+                    borderWidth: 2, pointRadius: 3, tension: 0.3, order: 1,
+                });
+            }
+
+            if (grafico) {
+                grafico.data.labels = labels;
+                grafico.data.datasets = datasets;
+                grafico.update();
+                return;
+            }
+
+            const fmt = () => formatoMoneda();
+
+            grafico = new Chart($('graficoCrecimiento'), {
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#cbd5e1', usePointStyle: true, boxWidth: 8 } },
+                        tooltip: {
+                            backgroundColor: '#171926',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.dataset.label}: ${fmt().format(ctx.parsed.y)}`,
+                                footer: (items) => {
+                                    const total = items
+                                        .filter(i => i.dataset.stack === 'total')
+                                        .reduce((s, i) => s + i.parsed.y, 0);
+                                    return `Total: ${fmt().format(total)}`;
+                                },
+                            },
+                        },
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { display: false } },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', callback: (v) => formatoCompacto().format(v) },
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                        },
+                    },
+                },
+            });
+        }
+
+        // ---------- Moneda ----------
+        function cambiarMoneda(nueva, tasaSugerida) {
+            moneda = nueva;
+            document.querySelectorAll('.currency-btn').forEach(b => {
+                b.setAttribute('aria-pressed', String(b.dataset.currency === nueva));
+            });
+            document.querySelectorAll('.js-symbol').forEach(s => {
+                s.textContent = nueva === 'USD' ? 'US$' : '$';
+            });
+            inputs.rate.value = tasaSugerida;
+            inputs.inflation.value = nueva === 'USD' ? 3 : 30;
+            calcular();
+        }
+
+        // ---------- Eventos ----------
+        document.querySelectorAll('.currency-btn').forEach(b => {
+            b.addEventListener('click', () => cambiarMoneda(b.dataset.currency, Number(b.dataset.rate)));
+        });
+
+        Object.values(inputs).forEach(i => i.addEventListener('input', calcular));
+
+        window.addEventListener('load', () => {
+            if (typeof Chart === 'undefined') {
+                $('chart-fallback').style.display = 'flex';
+            }
+            calcular();
+        });
+
+        // Primer cálculo inmediato de los números (el gráfico se dibuja al cargar Chart.js)
+        calcular();
+    })();
+    </script>
+</body>
+</html>
